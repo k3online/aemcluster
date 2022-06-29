@@ -1,76 +1,91 @@
-mongo3:
-  hostname: mongo3
-  image: mongo:3.2
-  entrypoint: [ "/usr/bin/mongod", "--replSet", "aem6", "--journal", "--smallfiles", "--rest" ]
-  ports:
-    - "27018:27017"
-    - "28018:28017"
-#  restart: always
+version: "3" 
 
-mongo2:
-  hostname: mongo2
-  image: mongo:3.2
-  entrypoint: [ "/usr/bin/mongod", "--replSet", "aem6", "--journal", "--smallfiles", "--rest" ]
-  ports:
-    - "27019:27017"
-    - "28019:28017"
-#  restart: always
+volumes:
+    aemaut1:
+    aemaut2:
 
-mongo1:
-  hostname: mongo1
-  image: mongo:3.2
-  entrypoint: [ "/usr/bin/mongod", "--replSet", "aem6", "--journal", "--smallfiles", "--rest" ]
-  ports:
-    - "27017:27017"
-    - "28017:28017"
-  links:
-    - mongo2:mongo2
-    - mongo3:mongo3
-#  restart: always
+services:
+  mongo3:
+    hostname: mongo3
+    image: mongo
+    entrypoint: [ "/usr/bin/mongod", "--replSet", "aem6", "--journal", "--bind_ip", "0.0.0.0" ]
+    ports:
+      - "27018:27017"
+      - "28018:28017"
+  #  restart: always
 
-mongosetup:
-  image: mongo:3.2
-  links:
-    - mongo1:mongo1
-    - mongo2:mongo2
-    - mongo3:mongo3
-  volumes:
-    - ./scripts:/scripts
-  entrypoint: [ "/scripts/setup.sh" ]
+  mongo2:
+    hostname: mongo2
+    image: mongo
+    entrypoint: [ "/usr/bin/mongod", "--replSet", "aem6", "--journal", "--bind_ip", "0.0.0.0" ]
+    ports:
+      - "27019:27017"
+      - "28019:28017"
+  #  restart: always
 
-java:
-  build: java/
-  container_name: java
+  mongo1:
+    hostname: mongo1
+    image: mongo
+    entrypoint: [ "/usr/bin/mongod", "--replSet", "aem6", "--journal", "--bind_ip", "0.0.0.0" ]
+    ports:
+      - "27017:27017"
+      - "28017:28017"
+    links:
+      - mongo2:mongo2
+      - mongo3:mongo3
+  #  restart: always
 
-aempub:
-  hostname: aempub
-  build: aem/
-  dockerfile: Dockerfile-pub
-  ports:
-    - "4503:4503"
-  command:
-     ["java", "-XX:MaxPermSize=512M", "-Xmx1524M", "-Xms512M", "-jar", "cq-quickstart-6.1.0.jar", "-p", "4503", "-r", "publish"]
- #  restart: always
+  mongosetup:
+    image: mongo
+    links:
+      - mongo1:mongo1
+      - mongo2:mongo2
+      - mongo3:mongo3
+    volumes:
+      - ./scripts:/scripts
+    entrypoint: [ "/scripts/setup.sh" ]
+  aemaut1:
+    hostname: aemaut1
+    build: aem-auth/
+    ports:
+      - "4501:4502"
+    depends_on:
+      - mongosetup
+    links:
+      - mongo1:mongo1
+      - mongo2:mongo2
+    command:
+        ["java", "-Xmx1024M", "-jar", "cq-quickstart-6.5.0.jar", "-p", "4502", "-r", "author,crx3,crx3mongo", "-Doak.mongo.uri=mongodb://mongo1:27017,mongo2:27017"]
+    volumes:
+        - aemaut1:/opt/aem/crx-quickstart
+    restart: unless-stopped
 
-aemaut:
- hostname: aemaut
- build: aem/
- ports:
-   - "4502:4502"
- links:
-   - mongo1:mongo1
-   - mongo2:mongo2
-   - aempub:aempub
- command:
-    ["java", "-XX:MaxPermSize=512M", "-Xmx1524M", "-Xms512M", "-mx4g", "-jar", "cq-quickstart-6.1.0.jar", "-p", "4502", "-r", "author,crx3,crx3mongo", "-Doak.mongo.uri=mongodb://mongo1:27017,mongo2:27017"]
-#  restart: always
+  aemaut2:
+    hostname: aemaut2
+    build: aem-auth/
+    ports:
+      - "4502:4502"
+    depends_on:
+      - mongosetup
+    links:
+      - mongo1:mongo1
+      - mongo2:mongo2
+    command:
+        ["java", "-Xmx1024M", "-jar", "cq-quickstart-6.5.0.jar", "-p", "4502", "-r", "author,crx3,crx3mongo", "-Doak.mongo.uri=mongodb://mongo1:27017,mongo2:27017"]
+    volumes:
+        - aemaut2:/opt/aem/crx-quickstart
+    restart: unless-stopped
 
-dispatcher:
- hostname: dispatcher
- build: dispatcher/
- ports:
-   - "80:80"
-   - "443:443"
- links:
-   - aempub:aempub
-# restart: always
+  nginx:
+      image: nginx:latest
+      volumes:
+        - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      depends_on:
+        - aemaut1
+        - aemaut2
+      ports:
+      - "4000:4000"
+
+networks:
+  default:
+    driver: bridge

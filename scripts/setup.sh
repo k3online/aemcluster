@@ -1,23 +1,26 @@
 #!/bin/bash
 
+apt-get update
+apt-get install -y iputils-ping
+
 MONGODB1=`ping -c 1 mongo1 | head -1  | cut -d "(" -f 2 | cut -d ")" -f 1`
 MONGODB2=`ping -c 1 mongo2 | head -1  | cut -d "(" -f 2 | cut -d ")" -f 1`
 MONGODB3=`ping -c 1 mongo3 | head -1  | cut -d "(" -f 2 | cut -d ")" -f 1`
 
 echo "Waiting for startup of mongo1.."
-until curl http://${MONGODB1}:28017/serverStatus\?text\=1 2>&1 | grep uptime | head -1; do
+until curl http://${MONGODB1}:27017/serverStatus\?text\=1 2>&1 | grep uptime | head -1; do
   printf '.'
   sleep 1
 done
 
 echo "Waiting for startup of mongo2.."
-until curl http://${MONGODB2}:28017/serverStatus\?text\=1 2>&1 | grep uptime | head -1; do
+until curl http://${MONGODB2}:27017/serverStatus\?text\=1 2>&1 | grep uptime | head -1; do
   printf '.'
   sleep 1
 done
 
 echo "Waiting for startup of mongo3.."
-until curl http://${MONGODB2}:28017/serverStatus\?text\=1 2>&1 | grep uptime | head -1; do
+until curl http://${MONGODB2}:27017/serverStatus\?text\=1 2>&1 | grep uptime | head -1; do
   printf '.'
   sleep 1
 done
@@ -44,7 +47,7 @@ mongo --host ${MONGODB1}:27017 <<EOL
             {
                 "_id": 2,
                 "host": "${MONGODB3}:27017",
-                "priority": 2,
+                "priority": 0,
                 arbiterOnly: true
             }
         ]

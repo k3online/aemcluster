@@ -1,66 +1,37 @@
-# aemcluster
+# What is this?
+This is a docker system containing containers hosting mongoDBs, aem authors and nginx server (for load balancing)
 
-Please copy cq-quickstart-6.1.0.jar and license.properties to aem/files/.
+# Running for first time
+This requires adding aem jar file, license file and setting up mongodb
 
-## Run the full setup with mongo cluster:
+## Copy files
+Please copy cq-quickstart-6.5.0.jar and license.properties to aem/files/.
 
-    docker-compose up
+## Spin up mongodb cluster
+    docker-compose up mongosetup
 
-This will boot up a mongo cluster with three nodes (primary, secondary and arbiter), an aem author instance which connects to the mongo cluster, one aem publish instance and one apache dispatcher. The first boot up takes a while.
+## Setting mongo for aem
+Spin up only one author instance
+    docker-compose up -d aemaut1
+This step will take lot of time (probably 10-20 mins depending on your machine)
 
-#### or if you already have a backup of the database, you can start db and aem separately and restore the backup:
+You can either tail the logs or wait for login screen http://localhost:4501.
 
-Boot up mongo cluster
-
-    docker-compose -f docker-compose-mongo.yml up
-
-Optional:
-
-    mongorestore --host docker --port 27017 backup/
-    
-Boot up aem with mongo configuration
-
-    docker-compose -f docker-compose-aem-mongo.yml up
+In case you run into issue (such as Authentication service may be missing error), stop the aem container, delete its volume (only the aemauth1 volume) and spin it up again. Repeat until you see login screen.
 
 
-## Run aem with default tar datastore:
+## Spinning up the system
+Once the DB is setup for aem, you can jus spin up all the containers using
+    docker-compose up -d
 
-    docker-compose -f docker-compose-aem-tar.yml up
+You can hit the LB endpoint at http://localhost:4000
 
-This will boot up one author instance, one publish instance and one dispatcher.
+>Note:
+>The mongosetup container stops after setting up the cluster and this is normal.
 
-## init replication:
-
-    curl --data transportUri=http://aempub:4503/bin/receive?sling:authRequestLogin=1 --user admin:admin http://docker:4502/etc/replication/agents.author/publish/jcr%3Acontent
-
-### update dispatcher flush address
-
-docker-compose can't set ip of dispatcher inside of aempub because a link cycle is not possible.
-
-    curl --data transportUri=http://172.17.0.8:80/dispatcher/invalidate.cache --user admin:admin http://docker:4502/etc/replication/agents.publish/flush/jcr%3Acontent
-    curl -u admin:admin -X POST -F path="/etc/replication/agents.publish/flush" -F cmd="activate" http://docker:4502/bin/replicate.json
-
-
-## mongo
+# mongo
 
 mongo status:
 
     mongo docker:27017 --eval 'rs.status();'
 
-mongo backup:
-
-    mongodump --host docker --port 27017 --out backup/
-
-or
-
-    mongorestore --host docker --port 27017 backup/
-
-
-## bash:
-
-    docker exec -it aemcluster_mongo1_1 bash
-    docker exec -it aemcluster_mongo2_1 bash
-    docker exec -it aemcluster_mongo3_1 bash
-    docker exec -it aemcluster_dispatcher_1 bash
-    docker exec -it aemcluster_aempub_1 bash
-    docker exec -it aemcluster_aemaut_1 bash
