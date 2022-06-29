@@ -12,7 +12,9 @@ Please copy cq-quickstart-6.5.0.jar and license.properties to aem/files/.
 
 ## Setting mongo for aem
 Spin up only one author instance
+
     docker-compose up -d aemaut1
+
 This step will take lot of time (probably 10-20 mins depending on your machine)
 
 You can either tail the logs or wait for login screen http://localhost:4501.
@@ -22,6 +24,7 @@ In case you run into issue (such as Authentication service may be missing error)
 
 ## Spinning up the system
 Once the DB is setup for aem, you can jus spin up all the containers using
+    
     docker-compose up -d
 
 You can hit the LB endpoint at http://localhost:4000
