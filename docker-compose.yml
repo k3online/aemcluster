@@ -3,45 +3,56 @@ version: "3"
 volumes:
     aemaut1:
     aemaut2:
+    mongo1data:
+    mongo2data:
+    mongo3data:
+    mongosetupdata:
 
 services:
   mongo3:
     hostname: mongo3
-    image: mongo
+    image: mongo:4.2
     entrypoint: [ "/usr/bin/mongod", "--replSet", "aem6", "--journal", "--bind_ip", "0.0.0.0" ]
     ports:
       - "27018:27017"
       - "28018:28017"
+    volumes:
+      - mongo3data:/data/db
   #  restart: always
 
   mongo2:
     hostname: mongo2
-    image: mongo
+    image: mongo:4.2
     entrypoint: [ "/usr/bin/mongod", "--replSet", "aem6", "--journal", "--bind_ip", "0.0.0.0" ]
     ports:
       - "27019:27017"
       - "28019:28017"
+    volumes:
+      - mongo2data:/data/db
   #  restart: always
 
   mongo1:
     hostname: mongo1
-    image: mongo
+    image: mongo:4.2
     entrypoint: [ "/usr/bin/mongod", "--replSet", "aem6", "--journal", "--bind_ip", "0.0.0.0" ]
     ports:
       - "27017:27017"
       - "28017:28017"
+    volumes:
+      - mongo1data:/data/db
     links:
       - mongo2:mongo2
       - mongo3:mongo3
   #  restart: always
 
   mongosetup:
-    image: mongo
+    image: mongo:4.2
     links:
       - mongo1:mongo1
       - mongo2:mongo2
       - mongo3:mongo3
     volumes:
+      - mongosetupdata:/data/db
       - ./scripts:/scripts
     entrypoint: [ "/scripts/setup.sh" ]
   aemaut1:
@@ -55,7 +66,7 @@ services:
       - mongo1:mongo1
       - mongo2:mongo2
     command:
-        ["java", "-Xmx1024M", "-jar", "cq-quickstart-6.5.0.jar", "-p", "4502", "-r", "author,crx3,crx3mongo", "-Doak.mongo.uri=mongodb://mongo1:27017,mongo2:27017"]
+        ["java", "-Xmx1500M", "-jar", "cq-quickstart-6.5.0.jar", "-p", "4502", "-r", "author,crx3,crx3mongo", "-Doak.mongo.uri=mongodb://mongo1:27017,mongo2:27017"]
     volumes:
         - aemaut1:/opt/aem/crx-quickstart
     restart: unless-stopped
@@ -71,7 +82,7 @@ services:
       - mongo1:mongo1
       - mongo2:mongo2
     command:
-        ["java", "-Xmx1024M", "-jar", "cq-quickstart-6.5.0.jar", "-p", "4502", "-r", "author,crx3,crx3mongo", "-Doak.mongo.uri=mongodb://mongo1:27017,mongo2:27017"]
+        ["java", "-Xmx1500M", "-jar", "cq-quickstart-6.5.0.jar", "-p", "4502", "-r", "author,crx3,crx3mongo", "-Doak.mongo.uri=mongodb://mongo1:27017,mongo2:27017"]
     volumes:
         - aemaut2:/opt/aem/crx-quickstart
     restart: unless-stopped
